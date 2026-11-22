@@ -1,0 +1,50 @@
+/* Escarcharindo – tema minimalista (misma paleta que ya usabas) */
+:root{--vino:#741323;--rojo:#94172A;--oro:#F4B52D;--crema:#F7F3F0;--cafe:#54251F;--rosa:#E5C7C2}
+
+#MainMenu, footer, header[data-testid="stHeader"]{visibility:hidden;height:0}
+.stApp{background:var(--crema)}
+.block-container{padding-top:1.6rem;max-width:1200px}
+
+/* Texto */
+[data-testid="stMain"] *{color:var(--cafe)}
+[data-testid="stMain"] h1{color:var(--vino);font-size:1.7rem;font-weight:700;margin-bottom:.1rem}
+[data-testid="stMain"] h2,[data-testid="stMain"] h3{color:var(--vino);font-size:1.05rem;font-weight:600}
+hr{border-color:var(--rosa);margin:1rem 0}
+
+/* Barra lateral */
+[data-testid="stSidebar"]{background:var(--vino)}
+[data-testid="stSidebar"] *{color:#fff}
+[data-testid="stSidebar"] hr{border-color:rgba(255,255,255,.18)}
+
+/* Tarjetas KPI */
+[data-testid="stMetric"]{background:#fff;border-radius:12px;padding:14px 16px;
+  border-bottom:3px solid var(--oro);box-shadow:0 1px 4px rgba(0,0,0,.05)}
+[data-testid="stMetricLabel"] p{font-size:.78rem;opacity:.75}
+[data-testid="stMetricValue"]{font-size:1.5rem;color:var(--vino)}
+
+/* Pestañas */
+[data-baseweb="tab-list"]{gap:.25rem;border-bottom:1px solid var(--rosa)}
+[data-baseweb="tab"]{background:transparent;padding:.4rem 1rem}
+[data-baseweb="tab-highlight"]{background:var(--oro);height:3px}
+button[aria-selected="true"] p{color:var(--vino);font-weight:700}
+
+/* Expanders y contenedores */
+[data-testid="stExpander"]{background:#fff;border:1px solid var(--rosa);border-radius:12px}
+[data-testid="stPlotlyChart"],[data-testid="stDataFrame"],[data-testid="stForm"]{
+  background:#fff;border-radius:12px}
+[data-testid="stForm"]{border:1px solid var(--rosa)}
+
+/* Campos */
+[data-testid="stMain"] input,[data-testid="stMain"] textarea,
+[data-testid="stMain"] [data-baseweb="select"]>div{background:#fff;border-color:var(--rosa)}
+
+/* Botones */
+[data-testid="stMain"] .stButton>button,[data-testid="stMain"] .stDownloadButton>button,
+[data-testid="stMain"] [data-testid="stFormSubmitButton"]>button{
+  background:var(--rojo);border:none;border-radius:8px;font-weight:600}
+[data-testid="stMain"] .stButton>button *,[data-testid="stMain"] .stDownloadButton>button *,
+[data-testid="stMain"] [data-testid="stFormSubmitButton"]>button *{color:#fff}
+[data-testid="stMain"] .stButton>button:hover,[data-testid="stMain"] .stDownloadButton>button:hover,
+[data-testid="stMain"] [data-testid="stFormSubmitButton"]>button:hover{background:var(--oro)}
+[data-testid="stMain"] .stButton>button:hover *,[data-testid="stMain"] .stDownloadButton>button:hover *,
+[data-testid="stMain"] [data-testid="stFormSubmitButton"]>button:hover *{color:var(--cafe)}
