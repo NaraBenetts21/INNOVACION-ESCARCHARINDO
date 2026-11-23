@@ -11,6 +11,19 @@ from database.consultas import (
     obtener_pedidos_para_produccion,
     finalizar_produccion
 )
+from modules.unidades import campo_cantidad
+
+
+def _etiqueta_producto(producto):
+    """Nombre + presentación, para distinguir 1/4, 1/2 y 1 litro."""
+    return f"{producto['nombre']} | {producto['presentacion']}"
+
+
+def _es_solido(producto):
+    """Cubetas y vasos se producen por peso (kg); lo demás por volumen (L)."""
+    gramos = int(producto.get("capacidad_g") or 0)
+    mililitros = int(producto.get("capacidad_ml") or 0)
+    return gramos > 0 and mililitros == 0
 
 
 def mostrar_produccion():
@@ -52,6 +65,17 @@ def mostrar_produccion():
 
             pedido_seleccionado = opciones_pedidos[pedido_nombre]
 
+            if _es_solido(pedido_seleccionado):
+                requerido = (
+                    f"**Peso requerido:** "
+                    f"{pedido_seleccionado['cantidad_kg']} kg"
+                )
+            else:
+                requerido = (
+                    f"**Volumen requerido:** "
+                    f"{pedido_seleccionado['volumen_litros']} litros"
+                )
+
             st.info(
                 f"""
                 **Cliente:** {pedido_seleccionado['cliente']}
@@ -60,7 +84,7 @@ def mostrar_produccion():
 
                 **Cantidad solicitada:** {pedido_seleccionado['cantidad']} unidades
 
-                **Volumen requerido:** {pedido_seleccionado['volumen_litros']} litros
+                {requerido}
 
                 **Fecha de entrega:** {pedido_seleccionado['fecha_entrega']}
                 """
@@ -77,7 +101,14 @@ def mostrar_produccion():
 
     st.subheader("Registrar nuevo lote")
 
-    # Preparar datos del pedido seleccionado
+    # Catálogo: etiqueta (nombre | presentación) -> producto
+    opciones_productos = {
+        _etiqueta_producto(p): p
+        for p in productos
+    }
+    etiquetas = list(opciones_productos.keys())
+
+    # Producto y cantidad por defecto, según el pedido elegido
     if pedido_seleccionado is not None:
 
         producto_pedido = next(
@@ -85,10 +116,17 @@ def mostrar_produccion():
             if p["id_producto"] == pedido_seleccionado["id_producto"]
         )
 
-        producto_predeterminado = producto_pedido["nombre"]
-        volumen_predeterminado = float(
-            pedido_seleccionado["volumen_litros"]
-        )
+        producto_predeterminado = _etiqueta_producto(producto_pedido)
+        clave_pedido = pedido_seleccionado["id_pedido"]
+
+        if _es_solido(pedido_seleccionado):
+            cantidad_predeterminada = float(
+                pedido_seleccionado["cantidad_kg"]
+            )
+        else:
+            cantidad_predeterminada = float(
+                pedido_seleccionado["volumen_litros"]
+            )
 
         st.caption(
             f"El lote quedará relacionado con el pedido "
@@ -96,42 +134,46 @@ def mostrar_produccion():
         )
 
     else:
-        producto_predeterminado = productos[0]["nombre"]
-        volumen_predeterminado = 10.0
+        producto_predeterminado = etiquetas[0]
+        cantidad_predeterminada = 10.0
+        clave_pedido = 0
+
+    # El producto se elige FUERA del formulario para que el campo de
+    # cantidad cambie de inmediato entre litros (líquidos) y kilos (sólidos).
+    producto_nombre = st.selectbox(
+        "Producto a fabricar",
+        etiquetas,
+        index=etiquetas.index(producto_predeterminado),
+        key=f"produccion_producto_{clave_pedido}"
+    )
+
+    producto = opciones_productos[producto_nombre]
+    solido = _es_solido(producto)
+
+    # Si el producto elegido no es el del pedido, se usa un valor base
+    if (
+        pedido_seleccionado is not None
+        and producto["id_producto"] == pedido_seleccionado["id_producto"]
+    ):
+        valor_inicial = cantidad_predeterminada
+    else:
+        valor_inicial = 10.0
 
     with st.form("formulario_produccion"):
 
-        # Seleccionar producto
-        opciones_productos = {
-            p["nombre"]: p["id_producto"]
-            for p in productos
-        }
-
-        producto_nombre = st.selectbox(
-            "Producto a fabricar",
-            list(opciones_productos.keys()),
-            index=list(opciones_productos.keys()).index(
-                producto_predeterminado
-            )
-        )
-
-        volumen = st.number_input(
-            "Volumen de producción (litros)",
-            min_value=0.01,
-            value=volumen_predeterminado,
-            step=1.0
+        # Cubetas y vasos: kg (o g). Líquidos: L (o ml).
+        cantidad_producida = campo_cantidad(
+            "Peso a producir" if solido else "Volumen de producción",
+            "kg" if solido else "l",
+            key=f"produccion_cantidad_{clave_pedido}_{producto['id_producto']}",
+            valor=max(valor_inicial, 0.001),
+            minimo=0.001,
+            paso=1.0
         )
 
         fecha = st.date_input(
             "Fecha de producción",
             value=date.today()
-        )
-
-        tiempo = st.number_input(
-            "Tiempo de cocción (minutos)",
-            min_value=1,
-            value=60,
-            step=5
         )
 
         responsable = st.text_input(
@@ -144,19 +186,21 @@ def mostrar_produccion():
 
         st.caption(
             "Captura únicamente los materiales utilizados. "
-            "Deja en cero los que no se utilizaron."
+            "Deja en cero los que no se utilizaron. "
+            "Puedes elegir la unidad (kg o g) en cada insumo."
         )
 
         consumos = []
 
         for insumo in insumos:
 
-            cantidad = st.number_input(
-                f"{insumo['nombre']} ({insumo['unidad_medida']})",
-                min_value=0.0,
-                value=0.0,
-                step=0.5,
-                key=f"produccion_{insumo['id_insumo']}"
+            cantidad = campo_cantidad(
+                insumo["nombre"],
+                insumo["unidad_medida"],
+                key=f"produccion_{insumo['id_insumo']}",
+                valor=0.0,
+                minimo=0.0,
+                paso=0.5
             )
 
             if cantidad > 0:
@@ -183,17 +227,18 @@ def mostrar_produccion():
 
                 try:
                     id_lote = registrar_lote(
-                        id_producto=opciones_productos[producto_nombre],
+                        id_producto=producto["id_producto"],
                         fecha=fecha,
-                        volumen=volumen,
-                        tiempo_coccion=tiempo,
+                        volumen=0 if solido else cantidad_producida,
+                        tiempo_coccion=None,
                         responsable=responsable,
                         consumos=consumos,
                         id_pedido=(
                             pedido_seleccionado["id_pedido"]
                             if pedido_seleccionado is not None
                             else None
-                        )
+                        ),
+                        cantidad_kg=cantidad_producida if solido else 0
                     )
 
                     st.session_state["produccion_registrando"] = False
@@ -218,12 +263,18 @@ def mostrar_produccion():
     if lotes:
         df_lotes = pd.DataFrame(lotes)
 
+        # El tiempo de cocción ya no se captura ni se muestra
+        df_lotes = df_lotes.drop(
+            columns=["tiempo_coccion_min"],
+            errors="ignore"
+        )
+
         df_lotes = df_lotes.rename(columns={
             "id_lote": "Número de lote",
             "producto": "Producto",
             "fecha_produccion": "Fecha de producción",
             "volumen_litros": "Volumen (litros)",
-            "tiempo_coccion_min": "Tiempo de cocción (min)",
+            "cantidad_kg": "Peso (kg)",
             "responsable": "Responsable",
             "estado": "Estado"
         })
@@ -290,5 +341,3 @@ def mostrar_produccion():
 
     else:
         st.info("No hay lotes disponibles.")
-
-

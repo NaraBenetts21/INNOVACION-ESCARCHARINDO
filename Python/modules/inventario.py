@@ -1,4 +1,5 @@
 
+
 import streamlit as st
 import pandas as pd
 
@@ -7,6 +8,7 @@ from database.consultas import (
     registrar_movimiento,
     obtener_movimientos
 )
+from modules.unidades import campo_cantidad
 
 
 def mostrar_inventario():
@@ -67,27 +69,40 @@ def mostrar_inventario():
     # Registrar movimientos
     st.subheader("Registrar movimiento")
 
+    opciones_insumos = {
+        i["nombre"]: i
+        for i in insumos
+    }
+
+    # El insumo se elige FUERA del formulario para que el selector de
+    # unidad (kg/g, L/ml) se ajuste de inmediato al insumo elegido.
+    nombre = st.selectbox(
+        "Selecciona el insumo",
+        list(opciones_insumos.keys()),
+        key="movimiento_insumo"
+    )
+
+    insumo = opciones_insumos[nombre]
+
+    st.caption(
+        f"Unidad de almacenamiento: {insumo['unidad_medida']} · "
+        f"Existencia actual: {insumo['stock_actual']}"
+    )
+
     with st.form("formulario_inventario"):
-
-        nombres = {
-            i["nombre"]: i["id_insumo"]
-            for i in insumos
-        }
-
-        nombre = st.selectbox(
-            "Selecciona el insumo",
-            list(nombres.keys())
-        )
 
         tipo = st.selectbox(
             "Tipo de movimiento",
             ["Entrada", "Salida"]
         )
 
-        cantidad = st.number_input(
+        cantidad = campo_cantidad(
             "Cantidad",
-            min_value=0.01,
-            step=1.0
+            insumo["unidad_medida"],
+            key="movimiento",
+            valor=1.0,
+            minimo=0.001,
+            paso=1.0
         )
 
         motivo = st.text_input("Motivo del movimiento")
@@ -101,7 +116,7 @@ def mostrar_inventario():
 
             try:
                 registrar_movimiento(
-                    nombres[nombre],
+                    insumo["id_insumo"],
                     tipo,
                     cantidad,
                     motivo,

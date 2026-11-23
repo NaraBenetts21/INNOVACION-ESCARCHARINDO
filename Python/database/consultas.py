@@ -127,6 +127,7 @@ def obtener_productos():
             nombre,
             presentacion,
             capacidad_ml,
+            capacidad_g,
             precio_venta,
             costo_produccion
         from productos
@@ -148,16 +149,19 @@ def registrar_lote(
     tiempo_coccion,
     responsable,
     consumos,
-    id_pedido=None
+    id_pedido=None,
+    cantidad_kg=0
 ):
     conexion = conectar()
     cursor = conexion.cursor()
 
     try:
         volumen = Decimal(str(volumen))
+        cantidad_kg = Decimal(str(cantidad_kg))
 
-        if volumen <= 0:
-            raise ValueError("El volumen debe ser mayor a cero.")
+        # Un lote es de litros (liquidos) o de kilos (cubetas, vasos)
+        if volumen <= 0 and cantidad_kg <= 0:
+            raise ValueError("La cantidad producida debe ser mayor a cero.")
 
         if not consumos:
             raise ValueError("Debes registrar al menos un insumo.")
@@ -203,16 +207,18 @@ def registrar_lote(
                 id_pedido,
                 fecha_produccion,
                 volumen_litros,
+                cantidad_kg,
                 tiempo_coccion_min,
                 responsable,
                 estado
             )
-            values (%s, %s, %s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             id_producto,
             id_pedido,
             fecha,
             volumen,
+            cantidad_kg,
             tiempo_coccion,
             responsable,
             "En proceso"
@@ -285,6 +291,7 @@ def obtener_lotes():
             pr.nombre as producto,
             p.fecha_produccion,
             p.volumen_litros,
+            p.cantidad_kg,
             p.tiempo_coccion_min,
             p.responsable,
             p.estado
@@ -599,7 +606,9 @@ def obtener_pedidos_para_produccion():
                 pr.nombre as producto,
                 dp.cantidad,
                 pr.capacidad_ml,
-                dp.cantidad * pr.capacidad_ml / 1000 as volumen_litros
+                pr.capacidad_g,
+                dp.cantidad * pr.capacidad_ml / 1000 as volumen_litros,
+                dp.cantidad * pr.capacidad_g / 1000 as cantidad_kg
             from pedidos p
             inner join clientes c
                 on p.id_cliente = c.id_cliente

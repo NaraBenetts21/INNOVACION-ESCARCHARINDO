@@ -12,12 +12,13 @@ USE escarcharindo_simulador;
 CREATE TABLE clientes (
     id_cliente INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(120) NOT NULL,
-    tipo_cliente VARCHAR(50),
-    telefono VARCHAR(20),
-    correo VARCHAR(120),
+    tipo_cliente ENUM('Particular', 'Empresa') DEFAULT 'Particular',
+    telefono VARCHAR(20) NOT NULL,
+    correo VARCHAR(120) UNIQUE,
     direccion VARCHAR(200),
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 
 -- 2. PRODUCTOS
 CREATE TABLE productos (
